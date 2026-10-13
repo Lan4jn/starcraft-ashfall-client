@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>星际争霸：余烬 - 离线客户端存储桥接测试</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: var(--accent);
+      margin-top: 0;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .notice {
+      background: rgba(88, 166, 255, 0.1);
+      border-left: 4px solid var(--accent);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      background: #21262d;
+      border: 1px solid var(--border);
+    }
+    .badge-success { color: var(--success); border-color: var(--success); }
+    .badge-warn { color: var(--warning); border-color: var(--warning); }
+    button {
+      background: #21262d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    button:hover {
+      background: #30363d;
+      border-color: var(--accent);
+    }
+    button.primary {
+      background: #238636;
+      border-color: #2ea043;
+      color: #fff;
+    }
+    button.primary:hover {
+      background: #2ea043;
+    }
+    pre {
+      background: #090d13;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 13px;
+      max-height: 240px;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .status-item {
+      background: #090d13;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .status-label {
+      font-size: 12px;
+      color: #8b949e;
+      display: block;
+    }
+    .status-val {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f0f6fc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>《星际争霸：余烬》离线客户端桥接测试说明</h1>
+
+    <div class="notice">
+      <strong>提示：</strong>本页面为客户端离线存储桥接自测与引导说明页，<strong>不是</strong>新游戏启动器，不包含游戏完整下载逻辑。游戏主逻辑由宿主 Tauri 窗口加载原生游戏资源并由初始化脚本注入桥接。
+    </div>
+
+    <div class="card">
+      <h2>桥接核心机制说明</h2>
+      <ul>
+        <li><strong>同步恢复与旧键清除：</strong>启动时先以原生方法清空旧键并一次性回填全量字符串键（包含胶囊指针、动态UUID与排行榜等），绝不只筛选前缀。</li>
+        <li><strong>100ms 防抖合并：</strong>密集写入自动合并为单次快照提交，减少跨进程 IPC 损耗。</li>
+        <li><strong>单串行落盘链：</strong>快照落盘走严格单 Promise 串行队列，保证 Revision 递增不乱序；仅在 Rust 确认后推进。</li>
+        <li><strong>16MiB 保护与 UTF-8 校验：</strong>严格按 UTF-8 字节计算快照体积，超限明确报告 <code>flush_failed</code> 并拒绝提交，避免静默截断。</li>
+        <li><strong>原型防污染保护：</strong>底层快照映射均使用无原型对象（<code>Object.create(null)</code>），杜绝 <code>__proto__</code> 原型链污染。</li>
+        <li><strong>优雅退出保护（Freeze / Thaw）：</strong>退出前调用 <code>freeze()</code> 取得最终快照；若用户在确认框取消退出，通过 <code>thaw()</code> 恢复正常写入与脏标记合并，不丢失数据。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>桥接状态诊断面板</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-label">桥接实例</span>
+          <span class="status-val" id="status-installed">未就绪</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">当前 Revision</span>
+          <span class="status-val" id="status-rev">0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">脏标记 (isDirty)</span>
+          <span class="status-val" id="status-dirty">否</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">冻结状态 (isFrozen)</span>
+          <span class="status-val" id="status-frozen">否</span>
+        </div>
+      </div>
+
+      <div>
+        <button class="primary" id="btn-write">写入测试数据 (UUID & 分数)</button>
+        <button id="btn-flush">立即执行 Flush()</button>
+        <button id="btn-freeze">触发 Freeze()</button>
+        <button id="btn-thaw">触发 Thaw()</button>
+        <button id="btn-clear">清空 LocalStorage</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>实时操作日志</h2>
+      <pre id="log-output">正在初始化测试环境...</pre>
+    </div>
+  </div>
+
+  <script type="module">
+    import { installBridge } from './bridge.js';
+
+    const logEl = document.getElementById('log-output');
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logEl.textContent += `\n[${time}] ${msg}`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // 模拟测试 IPC
+    const mockIpc = async (cmd, args) => {
+      log(`IPC 调用: ${cmd} (Revision: ${args?.snapshot?.revision ?? '-'})`);
+      return args?.snapshot?.revision;
+    };
+
+    try {
+      const bridge = installBridge({
+        storage: window.localStorage,
+        seed: {
+          schemaVersion: 1,
+          revision: 1,
+          savedAt: new Date().toISOString(),
+          values: {
+            'sc-shooter-local-board': JSON.stringify([{ score: 100, date: '2026-10-12' }]),
+            'capsule-pointer': 'uuid-bootstrap-init-001',
+            'capsule-uuid-bootstrap-init-001': JSON.stringify({ level: 1, credits: 50 }),
+          },
+        },
+        invoke: mockIpc,
+      });
+
+      function updateStatus() {
+        document.getElementById('status-installed').textContent = window.__ASHFALL_BRIDGE__ ? '已就绪' : '未绑定';
+        document.getElementById('status-rev').textContent = bridge.getRevision();
+        document.getElementById('status-dirty').textContent = bridge.isDirty() ? '是 (有待保存变更)' : '否';
+        document.getElementById('status-frozen').textContent = bridge.isFrozen() ? '已冻结' : '正常';
+      }
+
+      updateStatus();
+      log('存储桥接已成功注入，种子恢复完成。');
+
+      document.getElementById('btn-write').addEventListener('click', () => {
+        const uuid = 'capsule-' + Math.random().toString(36).slice(2, 9);
+        localStorage.setItem(uuid, JSON.stringify({ ts: Date.now(), wave: Math.floor(Math.random() * 20) }));
+        localStorage.setItem('sc-shooter-last-wave', String(Math.floor(Math.random() * 20)));
+        log(`已写入测试键: ${uuid}`);
+        updateStatus();
+        setTimeout(updateStatus, 150);
+      });
+
+      document.getElementById('btn-flush').addEventListener('click', async () => {
+        log('手动触发 flush()...');
+        const rev = await bridge.flush();
+        log(`flush 完成，最新确认 Revision: ${rev}`);
+        updateStatus();
+      });
+
+      document.getElementById('btn-freeze').addEventListener('click', async () => {
+        log('触发 freeze()...');
+        await bridge.freeze();
+        log('已进入冻结状态。');
+        updateStatus();
+      });
+
+      document.getElementById('btn-thaw').addEventListener('click', () => {
+        log('触发 thaw()...');
+        bridge.thaw();
+        log('已解冻，恢复写入。');
+        updateStatus();
+        setTimeout(updateStatus, 150);
+      });
+
+      document.getElementById('btn-clear').addEventListener('click', () => {
+        localStorage.clear();
+        log('已清空 localStorage。');
+        updateStatus();
+        setTimeout(updateStatus, 150);
+      });
+    } catch (err) {
+      log(`初始化异常: ${err.message}`);
+    }
+  </script>
+</body>
+</html>
