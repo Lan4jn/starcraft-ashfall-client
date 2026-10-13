@@ -1,0 +1,25 @@
+[[permission]]
+identifier = "allow-save-snapshot"
+description = "允许主游戏窗口提交完整快照"
+commands.allow = ["save_snapshot"]
+
+[[permission]]
+identifier = "allow-flush-failed"
+description = "允许主游戏窗口报告保存失败"
+commands.allow = ["flush_failed"]
+
+[[permission]]
+identifier = "allow-close-ready"
+description = "允许主游戏窗口确认本次关闭保存完成"
+commands.allow = ["close_ready"]
+
+[[permission]]
+identifier = "allow-close-failed"
+description = "允许主游戏窗口报告本次关闭保存失败"
+commands.allow = ["close_failed"]
+
+[[permission]]
+identifier = "allow-toggle-fullscreen"
+description = "允许主游戏窗口切换全屏"
+commands.allow = ["toggle_fullscreen"]
+

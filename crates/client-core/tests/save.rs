@@ -5,7 +5,7 @@ use tempfile::tempdir;
 
 use ashfall_client_core::data_dir::default_data_dir;
 use ashfall_client_core::save::{
-    SaveError, SaveLoad, SaveSnapshot, SaveStore, MAX_SAFE_INTEGER, MAX_SAVE_BYTES,
+    MAX_SAFE_INTEGER, MAX_SAVE_BYTES, SaveError, SaveLoad, SaveSnapshot, SaveStore,
 };
 
 #[test]
@@ -22,7 +22,10 @@ fn test_full_map_capsule_uuid_and_pointer() {
         "capsule-pointer-active".into(),
         "550e8400-e29b-41d4-a716-446655440000".into(),
     );
-    values.insert("sc-shooter-local-board".into(), r#"[{"score":9999}]"#.into());
+    values.insert(
+        "sc-shooter-local-board".into(),
+        r#"[{"score":9999}]"#.into(),
+    );
 
     let snapshot = SaveSnapshot {
         schema_version: 1,
@@ -178,7 +181,10 @@ fn test_deny_unknown_fields() {
         "extraField": "forbidden"
     }"#;
     let res: Result<SaveSnapshot, _> = serde_json::from_str(json_with_unknown);
-    assert!(res.is_err(), "serde deny_unknown_fields must reject extra fields");
+    assert!(
+        res.is_err(),
+        "serde deny_unknown_fields must reject extra fields"
+    );
 }
 
 #[test]
@@ -312,11 +318,18 @@ fn test_two_saves_backup_and_corrupt_primary_recovery() {
         .filter_map(|e| e.ok())
         .map(|e| e.file_name().to_string_lossy().to_string())
         .collect();
-    let corrupt_isolated = entries.iter().any(|name| name.starts_with("save.json.corrupt."));
-    assert!(corrupt_isolated, "corrupt save.json must be isolated with timestamp/random suffix: found {:?}", entries);
+    let corrupt_isolated = entries
+        .iter()
+        .any(|name| name.starts_with("save.json.corrupt."));
+    assert!(
+        corrupt_isolated,
+        "corrupt save.json must be isolated with timestamp/random suffix: found {:?}",
+        entries
+    );
 
     // save.json must have been rebuilt as a valid baseline (containing snap1)
-    let primary_after_recovery: SaveSnapshot = serde_json::from_slice(&fs::read(&save_path).unwrap()).unwrap();
+    let primary_after_recovery: SaveSnapshot =
+        serde_json::from_slice(&fs::read(&save_path).unwrap()).unwrap();
     assert_eq!(primary_after_recovery, snap1);
 }
 
@@ -363,11 +376,16 @@ fn test_save_after_recovery_does_not_pollute_backup() {
 
     // Verify backup contains the valid baseline snap1, NOT corrupt data
     let prev_path = root.join("save.previous.json");
-    let prev_content: SaveSnapshot = serde_json::from_slice(&fs::read(&prev_path).unwrap()).unwrap();
-    assert_eq!(prev_content, snap1, "backup must contain the valid baseline, not corrupted data");
+    let prev_content: SaveSnapshot =
+        serde_json::from_slice(&fs::read(&prev_path).unwrap()).unwrap();
+    assert_eq!(
+        prev_content, snap1,
+        "backup must contain the valid baseline, not corrupted data"
+    );
 
     // Primary contains snap3
-    let current_content: SaveSnapshot = serde_json::from_slice(&fs::read(&save_path).unwrap()).unwrap();
+    let current_content: SaveSnapshot =
+        serde_json::from_slice(&fs::read(&save_path).unwrap()).unwrap();
     assert_eq!(current_content, snap3);
 }
 
@@ -386,7 +404,10 @@ fn test_both_files_corrupt_returns_error_and_does_not_clear() {
     let res = store.load();
     match res {
         Err(SaveError::Corrupt(_)) => {}
-        other => panic!("expected Corrupt error when both are invalid, got {:?}", other),
+        other => panic!(
+            "expected Corrupt error when both are invalid, got {:?}",
+            other
+        ),
     }
 
     // Crucial: files must NOT be silently cleared or deleted
@@ -515,9 +536,11 @@ fn test_commit_with_runtime_corrupted_primary_isolates_and_does_not_lose_evidenc
         .unwrap()
         .filter_map(|e| e.ok())
         .collect();
-    let corrupt_isolated = entries
-        .iter()
-        .find(|e| e.file_name().to_string_lossy().starts_with("save.json.corrupt."));
+    let corrupt_isolated = entries.iter().find(|e| {
+        e.file_name()
+            .to_string_lossy()
+            .starts_with("save.json.corrupt.")
+    });
     assert!(
         corrupt_isolated.is_some(),
         "runtime corrupted save must be isolated before committing new save"
@@ -529,4 +552,3 @@ fn test_commit_with_runtime_corrupted_primary_isolates_and_does_not_lose_evidenc
     let current: SaveSnapshot = serde_json::from_slice(&fs::read(&save_path).unwrap()).unwrap();
     assert_eq!(current, snap2);
 }
-

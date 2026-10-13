@@ -115,9 +115,7 @@ pub fn resolve_file(root: &Path, uri_path: &str) -> Result<PathBuf, PathError> {
             match comp {
                 Component::Normal(_) => {}
                 _ => {
-                    return Err(PathError::Invalid(
-                        "non-normal component detected".into(),
-                    ));
+                    return Err(PathError::Invalid("non-normal component detected".into()));
                 }
             }
         }
@@ -152,14 +150,10 @@ pub fn resolve_file(root: &Path, uri_path: &str) -> Result<PathBuf, PathError> {
     // 10. Check file metadata (directory -> Forbidden, non-regular file -> Forbidden)
     let meta = std::fs::metadata(&canonical_target).map_err(PathError::Io)?;
     if meta.is_dir() {
-        return Err(PathError::Forbidden(
-            "directory access is forbidden".into(),
-        ));
+        return Err(PathError::Forbidden("directory access is forbidden".into()));
     }
     if !meta.is_file() {
-        return Err(PathError::Forbidden(
-            "target is not a regular file".into(),
-        ));
+        return Err(PathError::Forbidden("target is not a regular file".into()));
     }
 
     Ok(canonical_target)

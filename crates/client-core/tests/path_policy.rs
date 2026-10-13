@@ -1,14 +1,14 @@
 use std::fs;
 use tempfile::tempdir;
 
-use ashfall_client_core::path_policy::{resolve_file, PathError};
+use ashfall_client_core::path_policy::{PathError, resolve_file};
 
 #[test]
 fn test_status_codes() {
     assert_eq!(PathError::Invalid("bad".into()).status_code(), 400);
     assert_eq!(PathError::Forbidden("no".into()).status_code(), 403);
     assert_eq!(PathError::NotFound("missing".into()).status_code(), 404);
-    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "disk error");
+    let io_err = std::io::Error::other("disk error");
     assert_eq!(PathError::Io(io_err).status_code(), 500);
 }
 
@@ -89,7 +89,10 @@ fn test_directory_access_forbidden() {
     let err_slash = resolve_file(root, "/folder/").unwrap_err();
     match err_slash {
         PathError::Forbidden(_) => {}
-        other => panic!("expected Forbidden for directory with trailing slash, got {:?}", other),
+        other => panic!(
+            "expected Forbidden for directory with trailing slash, got {:?}",
+            other
+        ),
     }
 }
 
@@ -197,7 +200,10 @@ fn test_reject_double_encoding() {
     let err2 = resolve_file(root, "/hello%2520world.txt").unwrap_err();
     match err2 {
         PathError::Invalid(_) => {}
-        other => panic!("expected Invalid for double encoding %2520, got {:?}", other),
+        other => panic!(
+            "expected Invalid for double encoding %2520, got {:?}",
+            other
+        ),
     }
 }
 
@@ -250,7 +256,8 @@ fn test_support_long_path_multisegment() {
     let uri = format!("/{}/{}/{}/{}/test.txt", seg1, seg2, seg3, seg4);
     assert!(uri.len() > 260, "uri length should exceed 260");
 
-    let resolved = resolve_file(root, &uri).expect("multisegment path exceeding 260 chars should resolve");
+    let resolved =
+        resolve_file(root, &uri).expect("multisegment path exceeding 260 chars should resolve");
     assert_eq!(resolved, target_file.canonicalize().unwrap());
 }
 
@@ -265,7 +272,8 @@ fn test_long_chinese_filename_utf16_limit() {
     fs::write(&file, "chinese long").unwrap();
 
     let uri = format!("/{}", long_chinese_name);
-    let resolved = resolve_file(root, &uri).expect("long chinese filename under 255 UTF-16 units should resolve");
+    let resolved = resolve_file(root, &uri)
+        .expect("long chinese filename under 255 UTF-16 units should resolve");
     assert_eq!(resolved, file.canonicalize().unwrap());
 }
 
@@ -308,7 +316,10 @@ fn test_external_symlink_forbidden() {
             let err = resolve_file(root_dir.path(), "/link_to_outside.txt").unwrap_err();
             match err {
                 PathError::Forbidden(_) => {}
-                other => panic!("expected Forbidden for symlink escaping root, got {:?}", other),
+                other => panic!(
+                    "expected Forbidden for symlink escaping root, got {:?}",
+                    other
+                ),
             }
         }
         Err(e) => {

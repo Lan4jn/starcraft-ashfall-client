@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ashfall Local",
+  "version": "0.1.0",
+  "identifier": "local.ashfall.portable",
+  "build": { "frontendDist": "bootstrap" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": { "capabilities": [] }
+  },
+  "bundle": { "active": false }
+}

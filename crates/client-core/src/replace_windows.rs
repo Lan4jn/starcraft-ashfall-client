@@ -43,13 +43,13 @@ fn to_wide_null(path: &Path) -> Vec<u16> {
 /// On Windows:
 /// - If `target` exists, uses `ReplaceFileW` with flags=0 (temporary file is already synced via `sync_all`).
 /// - If `target` does not exist (first creation), uses `MoveFileExW`.
+///
 /// Does not delete existing valid files beforehand.
 #[cfg(windows)]
 pub fn safe_replace(temp: &Path, target: &Path) -> std::io::Result<()> {
     #[cfg(test)]
     if is_inject_replace_failure() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        return Err(std::io::Error::other(
             "injected safe_replace failure for test",
         ));
     }
@@ -106,8 +106,7 @@ pub fn safe_replace(temp: &Path, target: &Path) -> std::io::Result<()> {
 pub fn safe_replace(temp: &Path, target: &Path) -> std::io::Result<()> {
     #[cfg(test)]
     if is_inject_replace_failure() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        return Err(std::io::Error::other(
             "injected safe_replace failure for test",
         ));
     }

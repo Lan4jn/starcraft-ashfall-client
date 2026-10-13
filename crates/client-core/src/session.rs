@@ -1,6 +1,6 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use rand::RngCore;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub const SESSION_COOKIE_NAME: &str = "ashfall_session";
 
@@ -64,13 +64,11 @@ impl SessionState {
     pub fn validate_cookie(&self, cookie_header: &str) -> bool {
         for pair in cookie_header.split(';') {
             let trimmed = pair.trim();
-            if let Some((name, val)) = trimmed.split_once('=') {
-                if name.trim() == SESSION_COOKIE_NAME {
-                    let val_trimmed = val.trim();
-                    if subtle_eq(val_trimmed.as_bytes(), self.session_cookie.as_bytes()) {
-                        return true;
-                    }
-                }
+            if let Some((name, val)) = trimmed.split_once('=')
+                && name.trim() == SESSION_COOKIE_NAME
+                && subtle_eq(val.trim().as_bytes(), self.session_cookie.as_bytes())
+            {
+                return true;
             }
         }
         false

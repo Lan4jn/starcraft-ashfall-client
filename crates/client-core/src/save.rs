@@ -336,7 +336,10 @@ mod tests {
             values: [("state".into(), "uncommitted".into())].into(),
         };
         let commit_res = store.commit(snap2);
-        assert!(commit_res.is_err(), "commit must fail under injected replace failure");
+        assert!(
+            commit_res.is_err(),
+            "commit must fail under injected replace failure"
+        );
 
         // Disable fault injection
         crate::replace_windows::set_inject_replace_failure(false);
@@ -344,7 +347,10 @@ mod tests {
         // Old primary file must remain intact
         match store.load().unwrap() {
             SaveLoad::Valid(snap) => {
-                assert_eq!(snap, snap1, "primary file must remain unchanged when replace fails");
+                assert_eq!(
+                    snap, snap1,
+                    "primary file must remain unchanged when replace fails"
+                );
             }
             other => panic!("expected Valid(snap1), got {:?}", other),
         }

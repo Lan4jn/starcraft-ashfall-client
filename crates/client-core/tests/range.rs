@@ -1,12 +1,15 @@
-use ashfall_client_core::range::{parse_range, ByteRange, RangeError};
+use ashfall_client_core::range::{ByteRange, RangeError, parse_range};
 
 #[test]
 fn test_range_struct_traits() {
     let r1 = ByteRange { start: 1, end: 3 };
     let r2 = r1; // Copy
     assert_eq!(r1, r2); // PartialEq, Eq
-    let cloned = r1.clone(); // Clone
-    assert_eq!(format!("{:?}", cloned), "ByteRange { start: 1, end: 3 }"); // Debug
+    let copied_again = r1;
+    assert_eq!(
+        format!("{:?}", copied_again),
+        "ByteRange { start: 1, end: 3 }"
+    ); // Debug
 }
 
 #[test]
@@ -77,14 +80,20 @@ fn test_parse_range_start_greater_than_end() {
 #[test]
 fn test_parse_range_start_out_of_bounds() {
     assert_eq!(parse_range("bytes=10-", 10), Err(RangeError::Unsatisfiable));
-    assert_eq!(parse_range("bytes=11-12", 10), Err(RangeError::Unsatisfiable));
+    assert_eq!(
+        parse_range("bytes=11-12", 10),
+        Err(RangeError::Unsatisfiable)
+    );
 }
 
 #[test]
 fn test_parse_range_multiple_ranges() {
     assert_eq!(parse_range("bytes=0-1, 2-3", 10), Err(RangeError::Multiple));
     assert_eq!(parse_range("bytes=1-, -2", 10), Err(RangeError::Multiple));
-    assert_eq!(parse_range("bytes=0-0, 1-1, 2-2", 10), Err(RangeError::Multiple));
+    assert_eq!(
+        parse_range("bytes=0-0, 1-1, 2-2", 10),
+        Err(RangeError::Multiple)
+    );
 }
 
 #[test]

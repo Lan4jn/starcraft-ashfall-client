@@ -1,18 +1,18 @@
+use axum::body::Body;
+use axum::extract::State;
+use axum::http::{HeaderValue, Method, Request, Response, StatusCode, header};
+use futures_util::Stream;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use axum::body::Body;
-use axum::extract::State;
-use axum::http::{header, HeaderValue, Method, Request, Response, StatusCode};
-use futures_util::Stream;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio_util::io::ReaderStream;
 
 use crate::path_policy;
 use crate::range;
-use crate::session::{SessionState, SESSION_COOKIE_NAME};
+use crate::session::{SESSION_COOKIE_NAME, SessionState};
 
 pub const DEFAULT_CSP: &str = "\
     default-src 'self'; \
@@ -199,10 +199,7 @@ pub async fn start(root: PathBuf) -> Result<ServerHandle, ServerError> {
     })
 }
 
-async fn handle_request(
-    State(state): State<Arc<AppState>>,
-    req: Request<Body>,
-) -> Response<Body> {
+async fn handle_request(State(state): State<Arc<AppState>>, req: Request<Body>) -> Response<Body> {
     let method = req.method().clone();
 
     // 1. Method check: only GET and HEAD supported; other methods return 405
@@ -217,16 +214,36 @@ async fn handle_request(
 
     // 2. Reject duplicate headers to prevent ambiguity / smuggling (fail-closed)
     if req.headers().get_all(header::HOST).iter().count() > 1 {
-        return make_response(&method, StatusCode::BAD_REQUEST, "400 Bad Request: Duplicate Host headers", []);
+        return make_response(
+            &method,
+            StatusCode::BAD_REQUEST,
+            "400 Bad Request: Duplicate Host headers",
+            [],
+        );
     }
     if req.headers().get_all(header::ORIGIN).iter().count() > 1 {
-        return make_response(&method, StatusCode::FORBIDDEN, "403 Forbidden: Duplicate Origin headers", []);
+        return make_response(
+            &method,
+            StatusCode::FORBIDDEN,
+            "403 Forbidden: Duplicate Origin headers",
+            [],
+        );
     }
     if req.headers().get_all(header::RANGE).iter().count() > 1 {
-        return make_response(&method, StatusCode::BAD_REQUEST, "400 Bad Request: Duplicate Range headers", []);
+        return make_response(
+            &method,
+            StatusCode::BAD_REQUEST,
+            "400 Bad Request: Duplicate Range headers",
+            [],
+        );
     }
     if req.headers().get_all(header::COOKIE).iter().count() > 1 {
-        return make_response(&method, StatusCode::FORBIDDEN, "403 Forbidden: Duplicate Cookie headers", []);
+        return make_response(
+            &method,
+            StatusCode::FORBIDDEN,
+            "403 Forbidden: Duplicate Cookie headers",
+            [],
+        );
     }
 
     // 3. Host check: must match exact 127.0.0.1:{actual_port}
@@ -236,30 +253,41 @@ async fn handle_request(
         None => false,
     };
     if !host_valid {
-        return make_response(&method, StatusCode::BAD_REQUEST, "400 Bad Request: Invalid Host", []);
+        return make_response(
+            &method,
+            StatusCode::BAD_REQUEST,
+            "400 Bad Request: Invalid Host",
+            [],
+        );
     }
 
     // 4. Origin check: if Origin present, must match exact http://127.0.0.1:{actual_port}
     let expected_origin = format!("http://127.0.0.1:{}", state.port);
     if let Some(origin) = req.headers().get(header::ORIGIN) {
-        let origin_str = match origin.to_str() {
-            Ok(s) => s,
-            Err(_) => {
-                return make_response(&method, StatusCode::FORBIDDEN, "403 Forbidden: Invalid Origin header", []);
+        match origin.to_str() {
+            Ok(s) if s == expected_origin => {}
+            _ => {
+                return make_response(
+                    &method,
+                    StatusCode::FORBIDDEN,
+                    "403 Forbidden: Invalid or mismatched Origin header",
+                    [],
+                );
             }
-        };
-        if origin_str != expected_origin {
-            return make_response(&method, StatusCode::FORBIDDEN, "403 Forbidden: Origin mismatch", []);
         }
     }
 
     // 5. Sec-Fetch-Site check: reject cross-site requests
-    if let Some(sfs) = req.headers().get("sec-fetch-site") {
-        if let Ok(s) = sfs.to_str() {
-            if s.eq_ignore_ascii_case("cross-site") {
-                return make_response(&method, StatusCode::FORBIDDEN, "403 Forbidden: Cross-site request rejected", []);
-            }
-        }
+    if let Some(sfs) = req.headers().get("sec-fetch-site")
+        && let Ok(s) = sfs.to_str()
+        && s.eq_ignore_ascii_case("cross-site")
+    {
+        return make_response(
+            &method,
+            StatusCode::FORBIDDEN,
+            "403 Forbidden: Cross-site request rejected",
+            [],
+        );
     }
 
     let path = req.uri().path();
@@ -287,7 +315,10 @@ async fn handle_request(
                 Body::empty(),
                 [
                     (header::LOCATION, HeaderValue::from_static("/index.html")),
-                    (header::SET_COOKIE, HeaderValue::try_from(cookie_val).unwrap()),
+                    (
+                        header::SET_COOKIE,
+                        HeaderValue::try_from(cookie_val).unwrap(),
+                    ),
                 ],
             );
         } else {
@@ -301,28 +332,36 @@ async fn handle_request(
     }
 
     // 7. Cookie authentication check for all subsequent file requests
-    let has_valid_cookie = match req.headers().get(header::COOKIE) {
-        Some(cookie_val) => match cookie_val.to_str() {
-            Ok(c_str) => state.session.validate_cookie(c_str),
-            Err(_) => false,
-        },
-        None => false,
-    };
+    let has_valid_cookie = req
+        .headers()
+        .get(header::COOKIE)
+        .and_then(|c| c.to_str().ok())
+        .map(|c_str| state.session.validate_cookie(c_str))
+        .unwrap_or(false);
 
     if !has_valid_cookie {
-        return make_response(&method, StatusCode::FORBIDDEN, "403 Forbidden: Session cookie required", []);
+        return make_response(
+            &method,
+            StatusCode::FORBIDDEN,
+            "403 Forbidden: Session cookie required",
+            [],
+        );
     }
 
     // 8. Resolve requested file path securely using path_policy
     let resolved_path = match path_policy::resolve_file(&state.root, path) {
         Ok(p) => p,
         Err(e) => {
-            let status = StatusCode::from_u16(e.status_code()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+            let status =
+                StatusCode::from_u16(e.status_code()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             return make_response(
                 &method,
                 status,
                 e.to_string(),
-                [(header::CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("text/plain; charset=utf-8"),
+                )],
             );
         }
     };
@@ -331,7 +370,12 @@ async fn handle_request(
     let permit = match state.semaphore.clone().acquire_owned().await {
         Ok(p) => p,
         Err(_) => {
-            return make_response(&method, StatusCode::SERVICE_UNAVAILABLE, "503 Service Unavailable", []);
+            return make_response(
+                &method,
+                StatusCode::SERVICE_UNAVAILABLE,
+                "503 Service Unavailable",
+                [],
+            );
         }
     };
 
@@ -344,7 +388,10 @@ async fn handle_request(
                 &method,
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to open file: {}", e),
-                [(header::CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("text/plain; charset=utf-8"),
+                )],
             );
         }
     };
@@ -357,7 +404,10 @@ async fn handle_request(
                 &method,
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to read metadata: {}", e),
-                [(header::CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("text/plain; charset=utf-8"),
+                )],
             );
         }
     };
@@ -366,7 +416,8 @@ async fn handle_request(
     let mime = mime_guess::from_path(&resolved_path)
         .first_or_octet_stream()
         .to_string();
-    let mime_val = HeaderValue::try_from(mime).unwrap_or(HeaderValue::from_static("application/octet-stream"));
+    let mime_val =
+        HeaderValue::try_from(mime).unwrap_or(HeaderValue::from_static("application/octet-stream"));
 
     // 11. Process Range request
     if let Some(range_raw) = req.headers().get(header::RANGE) {
@@ -374,7 +425,12 @@ async fn handle_request(
             Ok(s) => s,
             Err(_) => {
                 drop(permit);
-                return make_response(&method, StatusCode::BAD_REQUEST, "400 Bad Request: Invalid Range header encoding", []);
+                return make_response(
+                    &method,
+                    StatusCode::BAD_REQUEST,
+                    "400 Bad Request: Invalid Range header encoding",
+                    [],
+                );
             }
         };
 
@@ -382,7 +438,10 @@ async fn handle_request(
             Ok(byte_range) => {
                 let start = byte_range.start;
                 let end = byte_range.end;
-                let range_len = end.checked_sub(start).and_then(|d| d.checked_add(1)).unwrap_or(0);
+                let range_len = end
+                    .checked_sub(start)
+                    .and_then(|d| d.checked_add(1))
+                    .unwrap_or(0);
                 let content_range = format!("bytes {}-{}/{}", start, end, file_size);
                 let content_range_val = HeaderValue::try_from(content_range).unwrap();
                 let len_val = HeaderValue::from_str(&range_len.to_string()).unwrap();
@@ -408,7 +467,10 @@ async fn handle_request(
                         &method,
                         StatusCode::INTERNAL_SERVER_ERROR,
                         format!("Seek error: {}", e),
-                        [(header::CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"))],
+                        [(
+                            header::CONTENT_TYPE,
+                            HeaderValue::from_static("text/plain; charset=utf-8"),
+                        )],
                     );
                 }
 

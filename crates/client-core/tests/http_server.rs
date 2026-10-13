@@ -2,7 +2,7 @@ use std::fs;
 use std::time::Duration;
 use tempfile::tempdir;
 
-use ashfall_client_core::http_server::{start, DEFAULT_CSP};
+use ashfall_client_core::http_server::{DEFAULT_CSP, start};
 
 async fn send_raw_http(port: u16, raw_request: &str) -> String {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -41,39 +41,55 @@ async fn test_server_bootstrap_flow_and_cookie_auth() {
     assert_eq!(res.status(), reqwest::StatusCode::FORBIDDEN);
 
     // 2. Client consuming bootstrap URL
-    let res = raw_client
-        .get(&bootstrap_url)
-        .send()
-        .await
-        .unwrap();
+    let res = raw_client.get(&bootstrap_url).send().await.unwrap();
 
     assert_eq!(res.status(), reqwest::StatusCode::SEE_OTHER);
-    let location = res.headers().get(reqwest::header::LOCATION).unwrap().to_str().unwrap();
+    let location = res
+        .headers()
+        .get(reqwest::header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert_eq!(location, "/index.html");
     assert_eq!(
-        res.headers().get(reqwest::header::CACHE_CONTROL).unwrap().to_str().unwrap(),
+        res.headers()
+            .get(reqwest::header::CACHE_CONTROL)
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "no-store, private"
     );
     assert_eq!(
-        res.headers().get("referrer-policy").unwrap().to_str().unwrap(),
+        res.headers()
+            .get("referrer-policy")
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "no-referrer"
     );
 
     // Verify Set-Cookie header attributes
-    let set_cookie = res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap();
+    let set_cookie = res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap();
     assert!(set_cookie.contains("HttpOnly"), "cookie must be HttpOnly");
-    assert!(set_cookie.contains("SameSite=Strict"), "cookie must be SameSite=Strict");
+    assert!(
+        set_cookie.contains("SameSite=Strict"),
+        "cookie must be SameSite=Strict"
+    );
     assert!(set_cookie.contains("Path=/"), "cookie path must be /");
-    assert!(!set_cookie.contains("Secure"), "HTTP server must not set Secure flag");
+    assert!(
+        !set_cookie.contains("Secure"),
+        "HTTP server must not set Secure flag"
+    );
 
     let cookie_val = set_cookie.split(';').next().unwrap().trim();
 
     // 3. Replay bootstrap URL must return 403 Forbidden
-    let replay_res = raw_client
-        .get(&bootstrap_url)
-        .send()
-        .await
-        .unwrap();
+    let replay_res = raw_client.get(&bootstrap_url).send().await.unwrap();
     assert_eq!(replay_res.status(), reqwest::StatusCode::FORBIDDEN);
 
     // 4. Request with valid cookie succeeds
@@ -85,11 +101,21 @@ async fn test_server_bootstrap_flow_and_cookie_auth() {
         .unwrap();
     assert_eq!(auth_res.status(), reqwest::StatusCode::OK);
     assert_eq!(
-        auth_res.headers().get(reqwest::header::CACHE_CONTROL).unwrap().to_str().unwrap(),
+        auth_res
+            .headers()
+            .get(reqwest::header::CACHE_CONTROL)
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "no-store, private"
     );
     assert_eq!(
-        auth_res.headers().get("referrer-policy").unwrap().to_str().unwrap(),
+        auth_res
+            .headers()
+            .get("referrer-policy")
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "no-referrer"
     );
     let text = auth_res.text().await.unwrap();
@@ -108,7 +134,10 @@ async fn test_server_bootstrap_flow_and_cookie_auth() {
     // 6. Request with invalid/forged cookie returns 403
     let forged_res = raw_client
         .get(format!("{}/index.html", origin))
-        .header(reqwest::header::COOKIE, "ashfall_session=forgedtokenvalue12345")
+        .header(
+            reqwest::header::COOKIE,
+            "ashfall_session=forgedtokenvalue12345",
+        )
         .send()
         .await
         .unwrap();
@@ -133,7 +162,16 @@ async fn test_host_and_origin_headers() {
         .build()
         .unwrap();
     let boot_res = client.get(&bootstrap_url).send().await.unwrap();
-    let cookie_val = boot_res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+    let cookie_val = boot_res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
 
     // 1. Correct Host and Origin works
     let port = origin.strip_prefix("http://127.0.0.1:").unwrap();
@@ -141,7 +179,10 @@ async fn test_host_and_origin_headers() {
         .get(format!("{}/index.html", origin))
         .header(reqwest::header::COOKIE, &cookie_val)
         .header(reqwest::header::HOST, format!("127.0.0.1:{}", port))
-        .header(reqwest::header::ORIGIN, format!("http://127.0.0.1:{}", port))
+        .header(
+            reqwest::header::ORIGIN,
+            format!("http://127.0.0.1:{}", port),
+        )
         .send()
         .await
         .unwrap();
@@ -205,7 +246,16 @@ async fn test_http_methods_and_status_codes() {
         .build()
         .unwrap();
     let boot_res = client.get(&bootstrap_url).send().await.unwrap();
-    let cookie_val = boot_res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+    let cookie_val = boot_res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
 
     // 1. Non-GET/HEAD methods return 405 Method Not Allowed
     let post_res = client
@@ -233,7 +283,10 @@ async fn test_http_methods_and_status_codes() {
         .unwrap();
     assert_eq!(not_found_res.status(), reqwest::StatusCode::NOT_FOUND);
     let body = not_found_res.text().await.unwrap();
-    assert!(!body.contains("<html") && !body.contains("<!DOCTYPE"), "404 must not return HTML");
+    assert!(
+        !body.contains("<html") && !body.contains("<!DOCTYPE"),
+        "404 must not return HTML"
+    );
 
     // 3. Query parameters stripped via uri.path()
     let query_res = client
@@ -322,7 +375,16 @@ async fn test_head_method() {
         .build()
         .unwrap();
     let boot_res = client.get(&bootstrap_url).send().await.unwrap();
-    let cookie_val = boot_res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+    let cookie_val = boot_res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
 
     let head_res = client
         .head(format!("{}/index.html", origin))
@@ -333,11 +395,21 @@ async fn test_head_method() {
 
     assert_eq!(head_res.status(), reqwest::StatusCode::OK);
     assert_eq!(
-        head_res.headers().get(reqwest::header::CONTENT_LENGTH).unwrap().to_str().unwrap(),
+        head_res
+            .headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .unwrap()
+            .to_str()
+            .unwrap(),
         content.len().to_string()
     );
     assert_eq!(
-        head_res.headers().get(reqwest::header::ACCEPT_RANGES).unwrap().to_str().unwrap(),
+        head_res
+            .headers()
+            .get(reqwest::header::ACCEPT_RANGES)
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "bytes"
     );
     let bytes = head_res.bytes().await.unwrap();
@@ -351,7 +423,10 @@ async fn test_head_method() {
         .await
         .unwrap();
     assert_eq!(head_404.status(), reqwest::StatusCode::NOT_FOUND);
-    assert!(head_404.bytes().await.unwrap().is_empty(), "HEAD 404 response body must be empty");
+    assert!(
+        head_404.bytes().await.unwrap().is_empty(),
+        "HEAD 404 response body must be empty"
+    );
 
     handle.shutdown().await.unwrap();
 }
@@ -372,7 +447,16 @@ async fn test_range_requests() {
         .build()
         .unwrap();
     let boot_res = client.get(&bootstrap_url).send().await.unwrap();
-    let cookie_val = boot_res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+    let cookie_val = boot_res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
 
     // 1. Closed range: bytes=1-4
     let res = client
@@ -383,8 +467,22 @@ async fn test_range_requests() {
         .await
         .unwrap();
     assert_eq!(res.status(), reqwest::StatusCode::PARTIAL_CONTENT);
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_RANGE).unwrap().to_str().unwrap(), "bytes 1-4/10");
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_LENGTH).unwrap().to_str().unwrap(), "4");
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_RANGE)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "bytes 1-4/10"
+    );
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "4"
+    );
     assert_eq!(res.bytes().await.unwrap(), &data[1..=4]);
 
     // 2. Open range: bytes=6-
@@ -396,8 +494,22 @@ async fn test_range_requests() {
         .await
         .unwrap();
     assert_eq!(res.status(), reqwest::StatusCode::PARTIAL_CONTENT);
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_RANGE).unwrap().to_str().unwrap(), "bytes 6-9/10");
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_LENGTH).unwrap().to_str().unwrap(), "4");
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_RANGE)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "bytes 6-9/10"
+    );
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "4"
+    );
     assert_eq!(res.bytes().await.unwrap(), &data[6..=9]);
 
     // 3. Suffix range: bytes=-3
@@ -409,8 +521,22 @@ async fn test_range_requests() {
         .await
         .unwrap();
     assert_eq!(res.status(), reqwest::StatusCode::PARTIAL_CONTENT);
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_RANGE).unwrap().to_str().unwrap(), "bytes 7-9/10");
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_LENGTH).unwrap().to_str().unwrap(), "3");
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_RANGE)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "bytes 7-9/10"
+    );
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "3"
+    );
     assert_eq!(res.bytes().await.unwrap(), &data[7..=9]);
 
     // 4. Unsatisfiable range: bytes=20-30 -> 416
@@ -422,7 +548,14 @@ async fn test_range_requests() {
         .await
         .unwrap();
     assert_eq!(res.status(), reqwest::StatusCode::RANGE_NOT_SATISFIABLE);
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_RANGE).unwrap().to_str().unwrap(), "bytes */10");
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_RANGE)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "bytes */10"
+    );
     assert!(res.bytes().await.unwrap().is_empty());
 
     // 5. Multiple ranges: bytes=0-1,2-3 -> 400
@@ -463,7 +596,16 @@ async fn test_empty_file() {
         .build()
         .unwrap();
     let boot_res = client.get(&bootstrap_url).send().await.unwrap();
-    let cookie_val = boot_res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+    let cookie_val = boot_res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
 
     // Empty file without range returns 200, length 0
     let res = client
@@ -473,7 +615,14 @@ async fn test_empty_file() {
         .await
         .unwrap();
     assert_eq!(res.status(), reqwest::StatusCode::OK);
-    assert_eq!(res.headers().get(reqwest::header::CONTENT_LENGTH).unwrap().to_str().unwrap(), "0");
+    assert_eq!(
+        res.headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "0"
+    );
     assert!(res.bytes().await.unwrap().is_empty());
 
     // Empty file with range returns 416
@@ -504,7 +653,16 @@ async fn test_concurrency_and_permit_drain() {
         .build()
         .unwrap();
     let boot_res = client.get(&bootstrap_url).send().await.unwrap();
-    let cookie_val = boot_res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+    let cookie_val = boot_res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
 
     // Launch 16 concurrent requests
     let mut tasks = Vec::new();
@@ -513,7 +671,12 @@ async fn test_concurrency_and_permit_drain() {
         let u = format!("{}/test.txt", origin);
         let cv = cookie_val.clone();
         tasks.push(tokio::spawn(async move {
-            let res = c.get(u).header(reqwest::header::COOKIE, cv).send().await.unwrap();
+            let res = c
+                .get(u)
+                .header(reqwest::header::COOKIE, cv)
+                .send()
+                .await
+                .unwrap();
             assert_eq!(res.status(), reqwest::StatusCode::OK);
             let text = res.text().await.unwrap();
             assert_eq!(text, "concurrency test content");
@@ -550,7 +713,10 @@ async fn test_shutdown_and_port_release() {
     // Port must be released: subsequent requests fail with connection refused/error
     tokio::time::sleep(Duration::from_millis(50)).await;
     let err_res = client.get(&bootstrap_url).send().await;
-    assert!(err_res.is_err(), "connecting after shutdown must fail as port is released");
+    assert!(
+        err_res.is_err(),
+        "connecting after shutdown must fail as port is released"
+    );
 }
 
 #[tokio::test]
@@ -560,7 +726,10 @@ async fn test_start_with_file_root_fails() {
     fs::write(&file_path, "not a directory").unwrap();
 
     let res = start(file_path).await;
-    assert!(res.is_err(), "Starting server with regular file root must fail");
+    assert!(
+        res.is_err(),
+        "Starting server with regular file root must fail"
+    );
     match res.unwrap_err() {
         ashfall_client_core::http_server::ServerError::NotADirectory(_) => {}
         other => panic!("Expected NotADirectory, got {:?}", other),
@@ -608,7 +777,16 @@ async fn test_duplicate_headers_rejected() {
         .build()
         .unwrap();
     let boot_res = client.get(&bootstrap_url).send().await.unwrap();
-    let cookie_val = boot_res.headers().get(reqwest::header::SET_COOKIE).unwrap().to_str().unwrap().split(';').next().unwrap().to_string();
+    let cookie_val = boot_res
+        .headers()
+        .get(reqwest::header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
     let port_str = origin.strip_prefix("http://127.0.0.1:").unwrap();
     let port_num: u16 = port_str.parse().unwrap();
 
@@ -618,7 +796,11 @@ async fn test_duplicate_headers_rejected() {
         port_num, port_num, cookie_val
     );
     let resp = send_raw_http(port_num, &raw_dup_host).await;
-    assert!(resp.starts_with("HTTP/1.1 400 Bad Request"), "Duplicate Host must return 400, got: {}", resp);
+    assert!(
+        resp.starts_with("HTTP/1.1 400 Bad Request"),
+        "Duplicate Host must return 400, got: {}",
+        resp
+    );
 
     // 2. Duplicate Cookie headers -> 403 Forbidden
     let raw_dup_cookie = format!(
@@ -626,7 +808,11 @@ async fn test_duplicate_headers_rejected() {
         port_num, cookie_val
     );
     let resp = send_raw_http(port_num, &raw_dup_cookie).await;
-    assert!(resp.starts_with("HTTP/1.1 403 Forbidden"), "Duplicate Cookie must return 403, got: {}", resp);
+    assert!(
+        resp.starts_with("HTTP/1.1 403 Forbidden"),
+        "Duplicate Cookie must return 403, got: {}",
+        resp
+    );
 
     handle.shutdown().await.unwrap();
 }
