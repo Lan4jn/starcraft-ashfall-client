@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "starcraft-ashfall-offline-v1",
+  "sourceManifestSha256": "d92414f88abe4ff46586336800176bd212316933d455b14c54a8154aa4309906",
+  "files": [
+    {
+      "path": "index.html",
+      "sourceSha256": "48bb462b5f9b967d27710772e9f611a3c202571bab8037c0413ab921c05f56d4",
+      "replacements": [
+        {
+          "search": "<script type=\"module\" crossorigin src=\"/assets/game-DqqbYs5s.js\"></script>",
+          "replace": "<script src=\"./offline-gate.js\"></script>\n  <script type=\"module\" crossorigin src=\"/assets/game-DqqbYs5s.js\"></script>",
+          "expectedCount": 1
+        },
+        {
+          "search": "<span class=\"terminal-status\"><i></i> ONLINE</span>",
+          "replace": "<span class=\"terminal-status\"><i></i> LOCAL</span>",
+          "expectedCount": 1
+        },
+        {
+          "search": "<button class=\"author-link feedback-link\" id=\"feedback-open\" type=\"button\" data-i18n=\"feedback.open\">反馈</button>",
+          "replace": "<button class=\"author-link feedback-link\" id=\"feedback-open\" type=\"button\" disabled title=\"本地版不提供在线反馈\">本地版不提供在线反馈</button>",
+          "expectedCount": 1
+        },
+        {
+          "search": "<button id=\"feedback-debrief\" class=\"text-button\" data-i18n=\"feedback.debrief\">给作者说两句</button>",
+          "replace": "<button id=\"feedback-debrief\" class=\"text-button\" disabled title=\"本地版不提供在线反馈\">本地版不提供在线反馈</button>",
+          "expectedCount": 1
+        },
+        {
+          "search": "<button id=\"feedback-send\" class=\"sc2-button primary\"><span data-i18n=\"feedback.send\">发送</span></button>",
+          "replace": "<button id=\"feedback-send\" class=\"sc2-button primary\" disabled title=\"本地版不提供在线反馈\">本地版不提供在线反馈</button>",
+          "expectedCount": 1
+        },
+        {
+          "search": "<button onclick=\"location.reload()\" data-i18n=\"error.reload\">重新载入战场</button>",
+          "replace": "<button disabled title=\"关闭后重新打开\">关闭后重新打开</button>",
+          "expectedCount": 1
+        },
+        {
+          "search": "<a class=\"lab-link\" id=\"lab-link\" href=\"/interface.html\" data-i18n=\"welcome.lab\" hidden>界面试装台</a>",
+          "replace": "<a class=\"lab-link\" id=\"lab-link\" href=\"/interface.html\" data-i18n=\"welcome.lab\" hidden style=\"display: none !important;\">界面试装台</a>",
+          "expectedCount": 1
+        },
+        {
+          "search": "<script>\n/* The game's module uses top-level await, a syntax error in Chrome 88, Safari 14 and the old X5 kernel of WeChat:\n   there it never runs and the page stays on its loading bar, uncounted. A one-line module probes for it, and a page\n   where it did not run is counted as old-browser (src/telemetry-rules.js). Nothing changes on screen. */\n(function () {\n  try {\n    var probe = document.createElement('script'); probe.type = 'module'; probe.textContent = 'await 0; window.__tlaOk = true;';\n    document.head.appendChild(probe);\n    setTimeout(function () {\n      if (window.__tlaOk || /^(localhost|127\\.0\\.0\\.1|\\[::1\\])$/.test(location.hostname)) return;\n      var phone = window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820;\n      var text = JSON.stringify({ event: 'old-browser', device: phone ? 'phone' : 'desktop' });\n      if (navigator.sendBeacon) navigator.sendBeacon('/api/events', new Blob([text], { type: 'text/plain' }));\n    }, 3000);\n  } catch (error) { /* Counting must never stop the page. */ }\n})();\n</script>",
+          "replace": "",
+          "expectedCount": 1
+        },
+        {
+          "search": "<!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{\"token\": \"b5e7501d5f3e4d76948d6dd138899b0d\"}'></script><!-- Cloudflare Pages Analytics -->",
+          "replace": "",
+          "expectedCount": 1
+        }
+      ]
+    }
+  ],
+  "additionalFiles": [
+    {
+      "path": "offline-gate.js",
+      "content": "/* 本地门禁只处理网络/外部导航，不修改游戏仿真或本地存储。 */\n(() => {\n  const devStyle = document.createElement('style');\n  devStyle.textContent = '.dev-presets,.dev-strip{display:none!important;pointer-events:none!important}';\n  document.head.appendChild(devStyle);\n  const blocked = (value) => {\n    const url = new URL(typeof value === 'string' || value instanceof URL ? value : value.url, location.href);\n    return url.origin !== location.origin || /^\\/api(?:\\/|$)/.test(url.pathname);\n  };\n  const nativeFetch = window.fetch.bind(window);\n  window.fetch = (input, init) => {\n    try {\n      if (blocked(input)) return Promise.reject(new Error('本地版不提供在线服务或反馈'));\n      return nativeFetch(input, init);\n    } catch (error) { return Promise.reject(error); }\n  };\n  if (typeof navigator.sendBeacon === 'function') {\n    const nativeBeacon = navigator.sendBeacon.bind(navigator);\n    navigator.sendBeacon = (url, data) => {\n      try { return blocked(url) ? false : nativeBeacon(url, data); }\n      catch { return false; }\n    };\n  }\n  const nativeOpen = window.open.bind(window);\n  window.open = (url, ...args) => {\n    if (!url) return null;\n    try { return blocked(url) ? null : nativeOpen(url, ...args); }\n    catch { return null; }\n  };\n  document.addEventListener('click', (event) => {\n    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;\n    if (!anchor) return;\n    try {\n      if (blocked(anchor.href)) {\n        event.preventDefault();\n        anchor.title = '本地版不打开外部链接';\n      }\n    } catch { event.preventDefault(); }\n  }, true);\n  window.__ASHFALL_OFFLINE__ = true;\n})();\n",
+      "contentType": "application/javascript"
+    }
+  ]
+}

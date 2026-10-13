@@ -1,0 +1,270 @@
+{
+  "assetMap": {
+    "file": "vendor/original/assets/asset-url-xC0_6oHv.js",
+    "url": "https://starcraft-shooter-2026.pages.dev/assets/asset-url-xC0_6oHv.js",
+    "expectedSha256": "dbf4def050fcb67b1b4e3ec9eacc5716f5d57c49e09c6c4f8dc8bfd4b523bb31"
+  },
+  "exclusions": [
+    {
+      "path": "assets/audio/sc2/ares-death.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/ares-fire.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/ares-land.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/cyclone-death.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/cyclone-fire.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/cyclone-lockon.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/cyclone-ready-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/cyclone-ready.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/drill-beam.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/goliath-death.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/goliath-fire.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/goliath-ready-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/goliath-ready.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellbat-death.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellbat-fire.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellbat-ready-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellbat-ready.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellion-death.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellion-fire.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellion-ready-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hellion-ready.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/hercules-drop.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/matrix-birth.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/mine-arm.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/mine-explode.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/mine-jump.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/pulse-impact.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/rebuild-done.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/sciencevessel-ready-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/sciencevessel-ready.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-beam.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-drill-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-drill.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-drop-0-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-drop-0.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-drop-1-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-drop-1.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-ready-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-ready.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-rebuilt-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-rebuilt.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-research-0-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-research-0.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-research-1-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-research-1.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-research-2-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-research-2.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-upgrade-0-zh.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/swann-upgrade-0.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/vessel-arc.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/vessel-irradiate.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/audio/sc2/vessel-repair.ogg",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/ares-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/cyclone-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/goliath-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/hellbat-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/hellion-junker-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/hellion-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/laserdrill-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/sciencevessel-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/siegetank-covert-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/spidermine-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "assets/models/thor-junker-sc2.glb",
+      "reason": "远端返回HTML而非媒体，上次快照失败"
+    },
+    {
+      "path": "/assets/ui/commander-swann-card.webp",
+      "reason": "第五次真实抓取返回HTML而非图片；当前菜单未提供Swann入口，但未来分支不可断言永不调用，任何实际请求均为该功能验收失败",
+      "reference": {
+        "file": "vendor/original/assets/game-DqqbYs5s.js",
+        "url": "https://starcraft-shooter-2026.pages.dev/assets/game-DqqbYs5s.js",
+        "expectedSha256": "1f8c20e49fef67cfa85b7700cf1e70ec16d1356ec74646760694bc68bcd2f36a"
+      }
+    }
+  ]
+}

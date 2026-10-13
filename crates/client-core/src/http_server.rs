@@ -14,18 +14,7 @@ use crate::path_policy;
 use crate::range;
 use crate::session::{SESSION_COOKIE_NAME, SessionState};
 
-pub const DEFAULT_CSP: &str = "\
-    default-src 'self'; \
-    script-src 'self'; \
-    worker-src 'self' blob:; \
-    style-src 'self' 'unsafe-inline'; \
-    img-src 'self' data: blob:; \
-    media-src 'self' blob:; \
-    font-src 'self' data:; \
-    connect-src 'self' ipc: http://ipc.localhost; \
-    frame-ancestors 'none'; \
-    base-uri 'self'; \
-    form-action 'self';";
+pub const DEFAULT_CSP: &str = include_str!("../../../config/offline-csp.txt");
 
 #[derive(Debug, thiserror::Error)]
 pub enum ServerError {

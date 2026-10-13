@@ -332,44 +332,103 @@ fn handle_close_timeout_or_failure_sync(
 // 主应用入口 (App Run)
 // ============================================================================
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClientRunMode {
+    Normal,
+    Fixture,
+    ValidateGame,
+}
+
+fn resolve_local_app_data(subfolder: &str) -> PathBuf {
+    std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("USERPROFILE").map(|u| PathBuf::from(u).join("AppData").join("Local"))
+        })
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(subfolder)
+}
+
 pub fn run() -> Result<(), String> {
-    // 1. 命令行参数解析：--fixture 仅在调试构建 (debug_assertions) 下接受
+    // 1. 命令行参数解析：--fixture 与 --validate-game 仅在调试构建 (debug_assertions) 下接受且互斥
     let args: Vec<String> = std::env::args().collect();
-    let is_fixture = if cfg!(debug_assertions) {
-        let mut fixture_mode = false;
+    let run_mode = if cfg!(debug_assertions) {
+        let mut selected_mode = ClientRunMode::Normal;
         for arg in args.iter().skip(1) {
-            if arg == "--fixture" {
-                fixture_mode = true;
-            } else {
-                return Err(format!(
-                    "未知命令行参数: {arg}。仅在调试模式下接受 --fixture 参数。"
-                ));
+            match arg.as_str() {
+                "--fixture" => {
+                    if selected_mode != ClientRunMode::Normal {
+                        return Err(
+                            "命令行参数冲突或重复: --fixture 与 --validate-game 互斥且不可重复指定。"
+                                .into(),
+                        );
+                    }
+                    selected_mode = ClientRunMode::Fixture;
+                }
+                "--validate-game" => {
+                    if selected_mode != ClientRunMode::Normal {
+                        return Err(
+                            "命令行参数冲突或重复: --fixture 与 --validate-game 互斥且不可重复指定。"
+                                .into(),
+                        );
+                    }
+                    selected_mode = ClientRunMode::ValidateGame;
+                }
+                _ => {
+                    return Err(format!(
+                        "未知命令行参数: {arg}。仅在调试模式下接受 --fixture 或 --validate-game 参数。"
+                    ));
+                }
             }
         }
-        fixture_mode
+        selected_mode
     } else {
         if args.len() > 1 {
             return Err("正式发布版本不接受命令行参数。".into());
         }
-        false
+        ClientRunMode::Normal
     };
 
-    // 2. 确定游戏资源根目录与数据目录
-    let (game_root, data_dir, cdp_args) = if is_fixture {
-        // 使用编译期常量 CARGO_MANIFEST_DIR，避免跨工作目录启动进程时路径解析失效
-        let manifest_game =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures/game");
+    let is_test = matches!(
+        run_mode,
+        ClientRunMode::Fixture | ClientRunMode::ValidateGame
+    );
 
-        let probe_data = std::env::var_os("LOCALAPPDATA")
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var_os("USERPROFILE")
-                    .map(|u| PathBuf::from(u).join("AppData").join("Local"))
-            })
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("StarCraftAshfallClientProbe");
+    // 2. 确定游戏资源根目录、数据目录与调试参数
+    let (game_root, data_dir) = match run_mode {
+        ClientRunMode::Fixture => {
+            // 使用编译期常量 CARGO_MANIFEST_DIR，避免跨工作目录启动进程时路径解析失效
+            let manifest_game =
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures/game");
+            let probe_data = resolve_local_app_data("StarCraftAshfallClientProbe");
+            (manifest_game, probe_data)
+        }
+        ClientRunMode::ValidateGame => {
+            // 读取可执行文件同级目录下的 game 目录，用于在隔离工作区中执行端到端真实资源验证
+            let current_exe =
+                std::env::current_exe().map_err(|e| format!("获取程序路径失败: {e}"))?;
+            let real_game = current_exe
+                .parent()
+                .ok_or_else(|| "无法获取当前程序所在目录".to_string())?
+                .join("game");
+            let val_data = resolve_local_app_data("StarCraftAshfallClientValidation");
+            (real_game, val_data)
+        }
+        ClientRunMode::Normal => {
+            let current_exe =
+                std::env::current_exe().map_err(|e| format!("获取程序路径失败: {e}"))?;
+            let real_game = current_exe
+                .parent()
+                .ok_or_else(|| "无法获取当前程序所在目录".to_string())?
+                .join("game");
+            let normal_data = ashfall_client_core::data_dir::default_data_dir()
+                .map_err(|e| format!("获取数据目录失败: {e}"))?;
+            (real_game, normal_data)
+        }
+    };
 
-        let cdp = if let Ok(port_str) = std::env::var("ASHFALL_FIXTURE_DEBUG_PORT") {
+    let cdp_args = if cfg!(debug_assertions) && is_test {
+        if let Ok(port_str) = std::env::var("ASHFALL_FIXTURE_DEBUG_PORT") {
             if let Ok(port) = port_str.trim().parse::<u16>() {
                 if (1..=65535).contains(&port) {
                     Some(format!(
@@ -383,20 +442,9 @@ pub fn run() -> Result<(), String> {
             }
         } else {
             None
-        };
-
-        (manifest_game, probe_data, cdp)
+        }
     } else {
-        let current_exe = std::env::current_exe().map_err(|e| format!("获取程序路径失败: {e}"))?;
-        let real_game = current_exe
-            .parent()
-            .ok_or_else(|| "无法获取当前程序所在目录".to_string())?
-            .join("game");
-
-        let normal_data = ashfall_client_core::data_dir::default_data_dir()
-            .map_err(|e| format!("获取数据目录失败: {e}"))?;
-
-        (real_game, normal_data, None)
+        None
     };
 
     // 3. 校验游戏资源目录与 index.html 是否就绪
@@ -417,12 +465,18 @@ pub fn run() -> Result<(), String> {
         ));
     }
 
-    // 生产模式完整清单校验（仅在非 fixture 模式下强制执行）
-    if !is_fixture {
+    // 完整资产清单校验（非 Fixture 模式下强制执行，在独立工作线程中运行流式哈希校验）
+    if run_mode != ClientRunMode::Fixture {
+        let root_for_verify = canonical_game_root.clone();
         let manifest_path = canonical_game_root.join("assets.json");
-        if let Err(e) =
-            ashfall_client_core::manifest::verify_manifest(&canonical_game_root, &manifest_path)
-        {
+
+        let verify_result = std::thread::spawn(move || {
+            ashfall_client_core::manifest::verify_manifest(&root_for_verify, &manifest_path)
+        })
+        .join()
+        .map_err(|_| "资产完整性校验线程执行异常".to_string())?;
+
+        if let Err(e) = verify_result {
             let msg = format!(
                 "游戏资源完整性校验失败: {e}。\n请确认 assets.json 资源清单与游戏素材完整无损坏。"
             );
