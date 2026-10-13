@@ -1,6 +1,6 @@
-target/
-vendor/
-game/
-dist/
-desktop/gen/
+/target/
+/vendor/
+/game/
+/dist/
+/desktop/gen/
 *.log
